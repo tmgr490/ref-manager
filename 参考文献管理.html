@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>参考文献管理</title>
+<style>
+  :root{
+    --bg:#f5f4f0; --card:#ffffff; --border:#dedcd3; --border-strong:#c3c0b3;
+    --text:#2c2c2a; --text-sub:#6b6a63; --text-muted:#928f83;
+    --accent:#185fa5; --accent-bg:#e6f1fb; --accent-text:#0c447c;
+    --danger:#a32d2d; --danger-bg:#fcebeb;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:"Hiragino Sans","Yu Gothic UI",sans-serif;
+    background:var(--bg); color:var(--text); margin:0; padding:2rem;
+    line-height:1.6;
+  }
+  .wrap{max-width:960px; margin:0 auto;}
+  h1{font-size:20px; font-weight:600; margin:0 0 4px;}
+  .sub{color:var(--text-sub); font-size:13px; margin:0 0 24px;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:1.25rem 1.5rem; margin-bottom:1.25rem;
+  }
+  .card h2{font-size:15px; font-weight:600; margin:0 0 14px;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .grid .full{grid-column:1 / -1;}
+  label{display:block; font-size:12px; color:var(--text-sub); margin-bottom:4px;}
+  input[type=text], input[type=number], textarea, select{
+    width:100%; padding:8px 10px; border:1px solid var(--border-strong);
+    border-radius:6px; font-size:14px; background:#fff; color:var(--text);
+    font-family:inherit;
+  }
+  textarea{resize:vertical; min-height:44px;}
+  .field{margin-bottom:10px;}
+  .actions{display:flex; gap:8px; margin-top:12px;}
+  button{
+    font-family:inherit; font-size:13px; padding:8px 16px; border-radius:6px;
+    border:1px solid var(--border-strong); background:#fff; color:var(--text);
+    cursor:pointer;
+  }
+  button:hover{background:#f0efe9;}
+  button.primary{background:var(--text); color:#fff; border-color:var(--text);}
+  button.primary:hover{opacity:.85;}
+  button.danger{color:var(--danger); border-color:var(--danger-bg);}
+  button.small{padding:4px 10px; font-size:12px;}
+  .toolbar{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  .toolbar input, .toolbar select{width:auto; min-width:160px;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th, td{text-align:left; padding:8px 8px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{color:var(--text-sub); font-weight:500; font-size:12px;}
+  tr:hover td{background:#faf9f6;}
+  .tag{
+    display:inline-block; background:var(--accent-bg); color:var(--accent-text);
+    font-size:11px; padding:2px 8px; border-radius:5px; margin:1px 3px 1px 0;
+  }
+  .type-badge{
+    display:inline-block; font-size:11px; padding:2px 8px; border-radius:5px;
+    background:#eeede6; color:var(--text-sub);
+  }
+  .empty{color:var(--text-muted); font-size:13px; padding:20px 0; text-align:center;}
+  .row-actions{display:flex; gap:6px;}
+  .out-box{
+    background:#fbfaf7; border:1px solid var(--border); border-radius:6px;
+    padding:12px; font-size:13px; white-space:pre-wrap; font-family:"MS Mincho",serif;
+    max-height:300px; overflow-y:auto; margin-top:10px;
+  }
+  .hint{font-size:12px; color:var(--text-muted); margin-top:8px;}
+  .count{font-size:12px; color:var(--text-muted); margin-left:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>参考文献管理</h1>
+  <p class="sub">卒業論文・修士論文の参考文献を登録し、学科書式の一覧を出力します（データはこのブラウザ内に保存されます）</p>
+
+  <div class="card">
+    <h2 id="form-title">文献を登録</h2>
+    <input type="hidden" id="edit-id">
+    <div class="grid">
+      <div class="field">
+        <label>種別</label>
+        <select id="f-type">
+          <option value="論文">論文</option>
+          <option value="書籍">書籍</option>
+          <option value="Web">Webサイト</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>発行年月（例: 2024.03）</label>
+        <input type="text" id="f-date" placeholder="2024.03">
+      </div>
+      <div class="field full">
+        <label>著者名</label>
+        <input type="text" id="f-author" placeholder="例: 和田章">
+      </div>
+      <div class="field full">
+        <label>文献タイトル</label>
+        <input type="text" id="f-title" placeholder="例: ロッキング壁による既存RC建物の耐震改修">
+      </div>
+      <div class="field full">
+        <label>出典（雑誌名・学会名・URLなど）</label>
+        <input type="text" id="f-source" placeholder="例: 日本建築学会学術講演梗概集">
+      </div>
+      <div class="field">
+        <label>ページ（例: p.623-626）</label>
+        <input type="text" id="f-pages" placeholder="p.623-626">
+      </div>
+      <div class="field">
+        <label>タグ（カンマ区切り）</label>
+        <input type="text" id="f-tags" placeholder="例: ダンパー, 実験">
+      </div>
+      <div class="field full">
+        <label>使用箇所（章・ページなど）</label>
+        <input type="text" id="f-location" placeholder="例: 3章 ダンパー設置方法 / p.42">
+      </div>
+      <div class="field full">
+        <label>引用メモ（どの主張で使ったか）</label>
+        <textarea id="f-note" placeholder="例: ロッキング壁の耐震改修効果の根拠として引用"></textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="btn-save">登録する</button>
+      <button id="btn-cancel" style="display:none;">編集をやめる</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>登録済みの文献<span class="count" id="count"></span></h2>
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="キーワードで検索">
+      <select id="tag-filter"><option value="">すべてのタグ</option></select>
+    </div>
+    <div id="list"></div>
+  </div>
+
+  <div class="card">
+    <h2>参考文献リストを出力</h2>
+    <p class="hint">学科書式（著者名：文献タイトル、出典、ページ、発行年月）で番号付きリストを生成します。上の一覧の並び順（↑↓で入れ替え可能）に番号を振ります。</p>
+    <div class="actions">
+      <button class="primary" id="btn-generate">リストを生成</button>
+      <button id="btn-copy" style="display:none;">コピー</button>
+      <button id="btn-download" style="display:none;">テキストで保存</button>
+    </div>
+    <div class="out-box" id="out-box" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h2>バックアップ</h2>
+    <p class="hint">データはブラウザ内にのみ保存されています。万が一に備えて、ファイルとして保存しておくことをおすすめします。</p>
+    <div class="actions">
+      <button id="btn-backup-download">バックアップを保存（JSON）</button>
+      <button id="btn-backup-restore">バックアップから復元</button>
+      <input type="file" id="backup-file-input" accept="application/json" style="display:none;">
+    </div>
+    <p class="hint" id="backup-status"></p>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'refmgr_refs_v1';
+let refs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(refs));
+}
+
+function uid(){
+  return 'r' + Date.now() + Math.random().toString(36).slice(2,7);
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function getFormData(){
+  return {
+    type: document.getElementById('f-type').value,
+    date: document.getElementById('f-date').value.trim(),
+    author: document.getElementById('f-author').value.trim(),
+    title: document.getElementById('f-title').value.trim(),
+    source: document.getElementById('f-source').value.trim(),
+    pages: document.getElementById('f-pages').value.trim(),
+    tags: document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    location: document.getElementById('f-location').value.trim(),
+    note: document.getElementById('f-note').value.trim(),
+  };
+}
+
+function clearForm(){
+  ['f-date','f-author','f-title','f-source','f-pages','f-tags','f-location','f-note'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-type').value = '論文';
+  document.getElementById('edit-id').value = '';
+  document.getElementById('form-title').textContent = '文献を登録';
+  document.getElementById('btn-save').textContent = '登録する';
+  document.getElementById('btn-cancel').style.display = 'none';
+}
+
+document.getElementById('btn-save').addEventListener('click', () => {
+  const data = getFormData();
+  const errBox = document.getElementById('f-title');
+  if(!data.author && !data.title){
+    alert('著者名かタイトルのどちらかは入力してください');
+    return;
+  }
+  const editId = document.getElementById('edit-id').value;
+  if(editId){
+    const idx = refs.findIndex(r => r.id === editId);
+    if(idx >= 0){ refs[idx] = {...refs[idx], ...data}; }
+  } else {
+    refs.push({id: uid(), createdAt: Date.now(), ...data});
+  }
+  save();
+  clearForm();
+  render();
+});
+
+document.getElementById('btn-cancel').addEventListener('click', clearForm);
+
+function editRef(id){
+  const r = refs.find(r => r.id === id);
+  if(!r) return;
+  document.getElementById('edit-id').value = r.id;
+  document.getElementById('f-type').value = r.type || '論文';
+  document.getElementById('f-date').value = r.date || '';
+  document.getElementById('f-author').value = r.author || '';
+  document.getElementById('f-title').value = r.title || '';
+  document.getElementById('f-source').value = r.source || '';
+  document.getElementById('f-pages').value = r.pages || '';
+  document.getElementById('f-tags').value = (r.tags || []).join(', ');
+  document.getElementById('f-location').value = r.location || '';
+  document.getElementById('f-note').value = r.note || '';
+  document.getElementById('form-title').textContent = '文献を編集';
+  document.getElementById('btn-save').textContent = '更新する';
+  document.getElementById('btn-cancel').style.display = 'inline-block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function deleteRef(id){
+  if(!confirm('この文献を削除しますか？')) return;
+  refs = refs.filter(r => r.id !== id);
+  save();
+  render();
+}
+
+function allTags(){
+  const set = new Set();
+  refs.forEach(r => (r.tags||[]).forEach(t => set.add(t)));
+  return [...set].sort();
+}
+
+function renderTagFilter(){
+  const sel = document.getElementById('tag-filter');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">すべてのタグ</option>' +
+    allTags().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  sel.value = current;
+}
+
+function filteredRefs(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const tag = document.getElementById('tag-filter').value;
+  return refs.filter(r => {
+    const matchesQ = !q || [r.author,r.title,r.source,r.note,r.location].join(' ').toLowerCase().includes(q);
+    const matchesTag = !tag || (r.tags||[]).includes(tag);
+    return matchesQ && matchesTag;
+  });
+}
+
+function render(){
+  renderTagFilter();
+  const list = filteredRefs();
+  document.getElementById('count').textContent = `（${refs.length}件）`;
+  const container = document.getElementById('list');
+  if(list.length === 0){
+    container.innerHTML = '<div class="empty">登録された文献はありません</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>No.</th><th>種別</th><th>著者・タイトル</th><th>使用箇所</th><th>タグ</th><th></th></tr></thead><tbody>';
+  list.forEach(r => {
+    const idx = refs.findIndex(x => x.id === r.id);
+    html += `<tr>
+      <td>
+        <div style="display:flex; align-items:center; gap:4px;">
+          <span style="color:var(--text-muted);">${idx + 1}</span>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <button class="small" style="padding:0 6px; line-height:1.4;" onclick="moveRef('${r.id}', -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+            <button class="small" style="padding:0 6px; line-height:1.4;" onclick="moveRef('${r.id}', 1)" ${idx === refs.length - 1 ? 'disabled' : ''}>↓</button>
+          </div>
+        </div>
+      </td>
+      <td><span class="type-badge">${escapeHtml(r.type)}</span></td>
+      <td>
+        <div style="font-weight:500;">${escapeHtml(r.author)}</div>
+        <div style="color:var(--text-sub);">${escapeHtml(r.title)}</div>
+        <div style="color:var(--text-muted); font-size:12px;">${escapeHtml(r.source)} ${escapeHtml(r.pages)} ${escapeHtml(r.date)}</div>
+      </td>
+      <td>${escapeHtml(r.location)}</td>
+      <td>${(r.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}</td>
+      <td>
+        <div class="row-actions">
+          <button class="small" onclick="editRef('${r.id}')">編集</button>
+          <button class="small danger" onclick="deleteRef('${r.id}')">削除</button>
+        </div>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function moveRef(id, dir){
+  const idx = refs.findIndex(r => r.id === id);
+  const newIdx = idx + dir;
+  if(idx < 0 || newIdx < 0 || newIdx >= refs.length) return;
+  const [item] = refs.splice(idx, 1);
+  refs.splice(newIdx, 0, item);
+  save();
+  render();
+}
+
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('tag-filter').addEventListener('change', render);
+
+function formatEntry(r, n){
+  const parts = [];
+  let head = `${n}) ${r.author || '著者不明'}`;
+  head += `：${r.title || ''}`;
+  const tail = [r.source, r.pages, r.date].filter(Boolean).join('、');
+  return tail ? `${head}、${tail}` : head;
+}
+
+document.getElementById('btn-generate').addEventListener('click', () => {
+  const box = document.getElementById('out-box');
+  if(refs.length === 0){
+    box.style.display = 'block';
+    box.textContent = '登録された文献がありません';
+    document.getElementById('btn-copy').style.display = 'none';
+    document.getElementById('btn-download').style.display = 'none';
+    return;
+  }
+  const text = refs.map((r, i) => formatEntry(r, i+1)).join('\n');
+  box.style.display = 'block';
+  box.textContent = '参考文献\n' + text;
+  document.getElementById('btn-copy').style.display = 'inline-block';
+  document.getElementById('btn-download').style.display = 'inline-block';
+});
+
+document.getElementById('btn-copy').addEventListener('click', () => {
+  navigator.clipboard.writeText(document.getElementById('out-box').textContent).then(()=>{
+    const btn = document.getElementById('btn-copy');
+    const orig = btn.textContent;
+    btn.textContent = 'コピーしました';
+    setTimeout(()=>{btn.textContent = orig;}, 1500);
+  });
+});
+
+document.getElementById('btn-download').addEventListener('click', () => {
+  const blob = new Blob([document.getElementById('out-box').textContent], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '参考文献リスト.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+function todayStamp(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`;
+}
+
+document.getElementById('btn-backup-download').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(refs, null, 2)], {type:'application/json;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `参考文献バックアップ_${todayStamp()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('backup-status').textContent = `保存しました（${refs.length}件）`;
+});
+
+document.getElementById('btn-backup-restore').addEventListener('click', () => {
+  document.getElementById('backup-file-input').click();
+});
+
+document.getElementById('backup-file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const status = document.getElementById('backup-status');
+    let data;
+    try{
+      data = JSON.parse(ev.target.result);
+    }catch(err){
+      status.textContent = 'ファイルを読み込めませんでした（JSON形式ではありません）';
+      return;
+    }
+    if(!Array.isArray(data)){
+      status.textContent = 'ファイルの形式が正しくありません';
+      return;
+    }
+    const mode = confirm(
+      `${data.length}件のバックアップを読み込みます。\n\nOK：今のデータに追加する\nキャンセル：今のデータを置き換える`
+    );
+    if(mode){
+      const existingIds = new Set(refs.map(r => r.id));
+      data.forEach(r => {
+        if(!r.id || existingIds.has(r.id)) r.id = uid();
+        refs.push(r);
+      });
+    } else {
+      if(!confirm('現在のデータを削除して置き換えます。よろしいですか？')) return;
+      refs = data;
+    }
+    save();
+    render();
+    status.textContent = `復元しました（現在 ${refs.length}件）`;
+    e.target.value = '';
+  };
+  reader.readAsText(file, 'utf-8');
+});
+
+render();
+</script>
+</body>
+</html>
